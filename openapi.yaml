@@ -1,0 +1,459 @@
+openapi: 3.1.0
+
+info:
+  title: GitHub Issues Gateway
+  description: Service wrapper around the GitHub Issues REST API
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8000
+
+paths:
+
+  /healthz:
+    get:
+      summary: Health check
+      operationId: healthz
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  /issues:
+    post:
+      summary: Create an issue
+      operationId: createIssue
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateIssueRequest"
+      responses:
+        "201":
+          description: Issue created
+          headers:
+            Location:
+              schema:
+                type: string
+              description: URL of the created issue
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Issue"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: GitHub authentication failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    get:
+      summary: List issues
+      operationId: listIssues
+      parameters:
+        - name: state
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [open, closed, all]
+            default: open
+
+        - name: labels
+          in: query
+          required: false
+          schema:
+            type: string
+
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+
+        - name: per_page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 30
+
+      responses:
+        "200":
+          description: List of issues
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Issue"
+        "400":
+          description: Invalid query parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /issues/{number}:
+    get:
+      summary: Get an issue
+      operationId: getIssue
+      parameters:
+        - $ref: "#/components/parameters/IssueNumber"
+      responses:
+        "200":
+          description: Issue returned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Issue"
+        "404":
+          description: Issue not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    patch:
+      summary: Update an issue
+      operationId: updateIssue
+      parameters:
+        - $ref: "#/components/parameters/IssueNumber"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateIssueRequest"
+      responses:
+        "200":
+          description: Issue updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Issue"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Issue not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /issues/{number}/comments:
+    post:
+      summary: Add a comment
+      operationId: createComment
+      parameters:
+        - $ref: "#/components/parameters/IssueNumber"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCommentRequest"
+      responses:
+        "201":
+          description: Comment created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Comment"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Issue not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    get:
+      summary: List comments
+      operationId: listComments
+      parameters:
+        - $ref: "#/components/parameters/IssueNumber"
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 30
+      responses:
+        "200":
+          description: List of comments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Comment"
+
+  /webhook:
+    post:
+      summary: Receive GitHub webhook
+      operationId: receiveWebhook
+      parameters:
+        - name: X-GitHub-Event
+          in: header
+          required: true
+          schema:
+            type: string
+            enum: [issues, issue_comment, ping]
+
+        - name: X-Hub-Signature-256
+          in: header
+          required: true
+          schema:
+            type: string
+
+        - name: X-GitHub-Delivery
+          in: header
+          required: true
+          schema:
+            type: string
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+
+      responses:
+        "204":
+          description: Webhook accepted
+        "400":
+          description: Invalid or unsupported event
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Invalid webhook signature
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /events:
+    get:
+      summary: Get processed webhook events
+      operationId: listEvents
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: Processed webhook events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WebhookEvent"
+
+components:
+
+  parameters:
+
+    IssueNumber:
+      name: number
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+
+  schemas:
+
+    CreateIssueRequest:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+          minLength: 1
+          example: Test issue
+        body:
+          type: string
+          nullable: true
+          example: This issue was created through the gateway.
+        labels:
+          type: array
+          items:
+            type: string
+          example:
+            - bug
+
+    UpdateIssueRequest:
+      type: object
+      minProperties: 1
+      properties:
+        title:
+          type: string
+          minLength: 1
+        body:
+          type: string
+          nullable: true
+        state:
+          type: string
+          enum:
+            - open
+            - closed
+
+    CreateCommentRequest:
+      type: object
+      required:
+        - body
+      properties:
+        body:
+          type: string
+          minLength: 1
+          example: This is a test comment.
+
+    Issue:
+      type: object
+      required:
+        - number
+        - title
+        - state
+        - html_url
+      properties:
+        number:
+          type: integer
+          example: 42
+        title:
+          type: string
+          example: Test issue
+        body:
+          type: string
+          nullable: true
+          example: Issue description
+        state:
+          type: string
+          enum:
+            - open
+            - closed
+        labels:
+          type: array
+          items:
+            type: string
+        html_url:
+          type: string
+          format: uri
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Comment:
+      type: object
+      required:
+        - id
+        - body
+        - created_at
+        - html_url
+      properties:
+        id:
+          type: integer
+          example: 123456
+        body:
+          type: string
+          example: This is a comment.
+        user:
+          type: string
+          example: your-github-username
+        created_at:
+          type: string
+          format: date-time
+        html_url:
+          type: string
+          format: uri
+
+    WebhookEvent:
+      type: object
+      properties:
+        id:
+          type: string
+        event:
+          type: string
+        action:
+          type: string
+        issue_number:
+          type: integer
+          nullable: true
+        timestamp:
+          type: string
+          format: date-time
+
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+              example: ISSUE_NOT_FOUND
+            message:
+              type: string
+              example: Issue 42 was not found.
+            retry_after:
+              type: integer
+              nullable: true
+              example: 60
+
+  securitySchemes:
+
+    githubBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: PAT
