@@ -1,7 +1,7 @@
 # Author: Jin Ting Zhou
 # Handles communication with the GitHub REST API.
 
-from typing import Any, Optional
+from typing import Any
 
 import httpx
 
@@ -15,8 +15,8 @@ class GitHubAPIError(Exception):
         self,
         status_code: int,
         message: str,
-        response_body: Optional[dict[str, Any]] = None,
-        headers: Optional[httpx.Headers] = None,
+        response_body: dict[str, Any] | None = None,
+        headers: httpx.Headers | None = None,
     ):
         self.status_code = status_code
         self.message = message
@@ -93,8 +93,8 @@ class GitHubClient:
     def create_issue(
         self,
         title: str,
-        body: Optional[str] = None,
-        labels: Optional[list[str]] = None,
+        body: str | None = None,
+        labels: list[str] | None = None,
     ) -> dict[str, Any]:
 
         payload: dict[str, Any] = {
@@ -128,9 +128,9 @@ class GitHubClient:
     def update_issue(
         self,
         number: int,
-        title: Optional[str] = None,
-        body: Optional[str] = None,
-        state: Optional[str] = None,
+        title: str | None = None,
+        body: str | None = None,
+        state: str | None = None,
     ) -> dict[str, Any]:
 
         payload: dict[str, Any] = {}
@@ -167,7 +167,7 @@ class GitHubClient:
     def list_issues(
         self,
         state: str = "open",
-        labels: Optional[str] = None,
+        labels: str | None = None,
         page: int = 1,
         per_page: int = 30,
     ) -> httpx.Response:
@@ -214,10 +214,7 @@ class GitHubClient:
         if remaining == "0":
             return True
 
-        if response.status_code == 429:
-            return True
-
-        return False
+        return response.status_code == 429
 
     def close(self):
         """Close the underlying HTTP client."""

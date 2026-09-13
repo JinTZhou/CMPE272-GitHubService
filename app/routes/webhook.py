@@ -5,9 +5,7 @@ import hashlib
 import hmac
 from datetime import datetime, timezone
 
-
-from fastapi import APIRouter, Header, HTTPException, Request, status, Query
-
+from fastapi import APIRouter, Header, HTTPException, Query, Request, status
 
 from ..config import WEBHOOK_SECRET
 from ..storage.event_store import event_store

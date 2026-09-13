@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 from app.main import app
 from app.routes import webhook
 from app.routes.webhook import verify_signature
+
 pytestmark = pytest.mark.unit
 
 SECRET = "test-secret"

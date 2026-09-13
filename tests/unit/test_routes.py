@@ -2,11 +2,10 @@
 
 import httpx
 import pytest
-
 from fastapi.testclient import TestClient
 
-from app.main import app
 from app.github_client import GitHubAPIError
+from app.main import app
 from app.routes import issues
 
 pytestmark = pytest.mark.unit

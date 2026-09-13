@@ -3,8 +3,6 @@
 
 import sqlite3
 from pathlib import Path
-from typing import Optional
-
 
 DATABASE_PATH = Path("events.db")
 
@@ -48,8 +46,8 @@ class EventStore:
         self,
         delivery_id: str,
         event: str,
-        action: Optional[str],
-        issue_number: Optional[int],
+        action: str | None,
+        issue_number: int | None,
         timestamp: str,
     ):
         with self._connect() as connection:

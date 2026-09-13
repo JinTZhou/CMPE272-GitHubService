@@ -10,7 +10,6 @@ from ..models import (
     UpdateIssueRequest,
 )
 
-
 router = APIRouter(
     prefix="/issues",
     tags=["Issues"],
